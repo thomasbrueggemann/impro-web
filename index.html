@@ -3,32 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pitchy simple example</title>
+    <title>Imprø - Fretboard Training</title>
+    <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <div>Pitch: <span id="pitch">0</span></div>
-    <div>Clarity: <span id="clarity">0</span></div>
-    <br />
-    <div>
-      On some browsers (such as Chrome), audio contexts will not work until they
-      are resumed following a user input or gesture on the page, to prevent
-      annoyance. If the pitch and clarity above are not updating, try clicking
-      this button to resume the audio context:
-      <button id="resume-button">Resume audio context</button>
+    <div class="noteCard">
+      <div id="note">A#</div>
+      <div><b>Pitch:</b> <span id="pitch">0</span></div>
+      <div><b>Clarity:</b> <span id="clarity">0</span></div>
+      <button id="resume-button">Start</button>
     </div>
     <script type="module">
       import { PitchDetector } from "https://esm.sh/pitchy@3";
+      import { Note } from "https://esm.sh/@tonaljs/tonal@4.6.5";
+
+      const MIN_CLARITY = 0.95;
 
       function updatePitch(analyserNode, detector, input, sampleRate) {
         analyserNode.getFloatTimeDomainData(input);
         const [pitch, clarity] = detector.findPitch(input, sampleRate);
 
-        document.getElementById("pitch").textContent = `${
-          Math.round(pitch * 10) / 10
-        } Hz`;
-        document.getElementById("clarity").textContent = `${Math.round(
-          clarity * 100
-        )} %`;
+        if (clarity > MIN_CLARITY) {
+          document.getElementById("pitch").textContent = `${
+            Math.round(pitch * 10) / 10
+          } Hz`;
+          document.getElementById("clarity").textContent = `${Math.round(
+            clarity * 100
+          )} %`;
+          const note = Note.fromFreq(pitch);
+          const notePitchClass = Note.pitchClass(note);
+          document.getElementById("note").textContent = notePitchClass;
+        }
         window.setTimeout(
           () => updatePitch(analyserNode, detector, input, sampleRate),
           100
