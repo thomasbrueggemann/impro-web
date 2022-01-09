@@ -8,16 +8,77 @@
   </head>
   <body>
     <div class="noteCard">
-      <div id="note">A#</div>
+      <div id="note"></div>
+      <div><b>Note:</b> <span id="playedNote">-</span></div>
       <div><b>Pitch:</b> <span id="pitch">0</span></div>
       <div><b>Clarity:</b> <span id="clarity">0</span></div>
       <button id="resume-button">Start</button>
     </div>
     <script type="module">
       import { PitchDetector } from "https://esm.sh/pitchy@3";
-      import { Note } from "https://esm.sh/@tonaljs/tonal@4.6.5";
+      import { Note, Interval } from "https://esm.sh/@tonaljs/tonal@4.6.5";
+
+      var SigmaFilter = (function () {
+        function SigmaFilter() {
+          this.data = [];
+          this.average = -1;
+        }
+        SigmaFilter.prototype.filter = function (input) {
+          if (this.isOutlier(input)) {
+            return this.average;
+          }
+          this.addObservation(input);
+          return input;
+        };
+        SigmaFilter.prototype.clear = function () {
+          this.data = [];
+          this.average = -1;
+        };
+        SigmaFilter.prototype.addObservation = function (input) {
+          this.data.push(input);
+          var sum = this.data.reduce(function (a, b) {
+            return a + b;
+          }, 0);
+          var avg = sum / this.data.length || 0;
+          this.average = avg;
+        };
+        SigmaFilter.prototype.isOutlier = function (input) {
+          if (this.average === -1) return false;
+          return Math.abs(input - this.average) >= this.average * 2;
+        };
+        return SigmaFilter;
+      })();
 
       const MIN_CLARITY = 0.95;
+      var currentPitchClass = null;
+      var sigmaFilter = new SigmaFilter();
+
+      function updateRandomPitchClass() {
+        const notes = [
+          "Ab",
+          "A",
+          "A#",
+          "Bb",
+          "B",
+          "C",
+          "C#",
+          "Db",
+          "D",
+          "D#",
+          "Eb",
+          "E",
+          "F",
+          "F#",
+          "Gb",
+          "G",
+          "G#",
+        ];
+
+        currentPitchClass = notes[Math.floor(Math.random() * notes.length)];
+        document.getElementById("note").textContent = currentPitchClass;
+      }
+
+      updateRandomPitchClass();
 
       function updatePitch(analyserNode, detector, input, sampleRate) {
         analyserNode.getFloatTimeDomainData(input);
@@ -27,13 +88,29 @@
           document.getElementById("pitch").textContent = `${
             Math.round(pitch * 10) / 10
           } Hz`;
+
           document.getElementById("clarity").textContent = `${Math.round(
             clarity * 100
           )} %`;
-          const note = Note.fromFreq(pitch);
+
+          const sigmaPitch = sigmaFilter.filter(pitch);
+
+          const note = Note.fromFreq(sigmaPitch);
           const notePitchClass = Note.pitchClass(note);
-          document.getElementById("note").textContent = notePitchClass;
+
+          document.getElementById("playedNote").textContent = notePitchClass;
+
+          const semitoneDeviation = Interval.semitones(
+            Interval.distance(notePitchClass, currentPitchClass)
+          );
+
+          if (semitoneDeviation == 0 || semitoneDeviation == 12) {
+            updateRandomPitchClass();
+          }
+        } else {
+          sigmaFilter.clear();
         }
+
         window.setTimeout(
           () => updatePitch(analyserNode, detector, input, sampleRate),
           100
