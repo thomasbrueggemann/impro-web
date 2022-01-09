@@ -12,7 +12,7 @@
       <div><b>Note:</b> <span id="playedNote">-</span></div>
       <div><b>Pitch:</b> <span id="pitch">0</span></div>
       <div><b>Clarity:</b> <span id="clarity">0</span></div>
-      <button id="resume-button">Start</button>
+      <a id="resume-button">Start</a>
     </div>
     <script type="module">
       import { PitchDetector } from "https://esm.sh/pitchy@3";
@@ -105,7 +105,9 @@
           );
 
           if (semitoneDeviation == 0 || semitoneDeviation == 12) {
-            updateRandomPitchClass();
+            window.setTimeout(() => {
+              updateRandomPitchClass();
+            }, 500);
           }
         } else {
           sigmaFilter.clear();
